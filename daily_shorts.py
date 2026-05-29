@@ -1,8 +1,8 @@
 """
 Daily Picture to YouTube Shorts - Creative Daily Style Animation
 Features:
-- THUMBNAIL: Full screen stretch (no yellow background, image covers everything)
-- VIDEO: All 4 corners visible + Yellow background + Smooth sliding animation
+- THUMBNAIL: Image stretched to FULL SCREEN (NO yellow, image covers everything)
+- VIDEO: Yellow background + All 4 corners visible + Smooth sliding animation
 - Audio support with looping
 - Auto-commits state to GitHub using SET secret
 """
@@ -18,7 +18,7 @@ from datetime import datetime
 from PIL import Image, ImageDraw, ImageFont
 
 # ========== CONFIGURATION ==========
-VIDEO_TITLE = "Stupid Broke Moment, What Happened? - Stupid Orange, Stupidest Broke Guy, Creative Daily"
+VIDEO_TITLE = "Stupid Broke Money, What Happened? - Stupid Orange, Stupidest Broke Guy, Creative Daily"
 HASHTAGS = "#stupidorange #creativedaily #stupidestbrokeguy #Dubai #UAE #fyp"
 VIDEO_DURATION = 18
 IMAGES_FOLDER = "daily_images"
@@ -147,11 +147,10 @@ def find_free_port(start_port=8080, end_port=8090):
 
 def create_thumbnail_fullscreen(image_path, output_path=None):
     """
-    Create THUMBNAIL: Full screen stretch (NO yellow background)
-    Image is stretched to cover entire 1080x1920 frame
-    This is what users see BEFORE clicking play
+    THUMBNAIL: Image stretched to FULL SCREEN (NO yellow background)
+    The image covers the entire 1080x1920 frame completely
     """
-    print(f"\n🎬 Creating THUMBNAIL (full screen stretch, no yellow background)...")
+    print(f"\n📸 Creating THUMBNAIL (image stretched to full screen, no yellow)...")
     
     if output_path is None:
         base = os.path.splitext(image_path)[0]
@@ -164,9 +163,10 @@ def create_thumbnail_fullscreen(image_path, output_path=None):
         target_width, target_height = 1080, 1920
         
         print(f"   📸 Original: {img_width}x{img_height}")
-        print(f"   📐 Stretching to: {target_width}x{target_height} (full screen, covers everything)")
+        print(f"   📐 Stretching to: {target_width}x{target_height} (covers entire frame)")
 
-        # Stretch to fill entire frame (no yellow background visible)
+        # Stretch the image to cover the ENTIRE frame
+        # This will distort the image but fills everything - NO yellow background
         try:
             img_resized = pil_img.resize((target_width, target_height), Image.Resampling.LANCZOS)
         except AttributeError:
@@ -175,8 +175,9 @@ def create_thumbnail_fullscreen(image_path, output_path=None):
             except:
                 img_resized = pil_img.resize((target_width, target_height))
 
+        # Save directly - NO background added
         img_resized.save(output_path, quality=90)
-        print(f"   ✅ Thumbnail created (full screen stretch, no yellow)")
+        print(f"   ✅ Thumbnail created (image covers full screen)")
         return output_path
         
     except Exception as e:
@@ -185,15 +186,14 @@ def create_thumbnail_fullscreen(image_path, output_path=None):
 
 def create_animated_video(image_path, output_path=None, slide_duration=18, audio_file=None):
     """
-    Create VIDEO: All 4 corners visible + Yellow background + Sliding animation
+    VIDEO: All 4 corners visible + Yellow background + Sliding animation
     Image fits entirely on screen, slides from bottom to top
-    This is what plays AFTER clicking play
     """
     if output_path is None:
         base = os.path.splitext(image_path)[0]
         output_path = f"{base}_shorts.mp4"
 
-    print(f"\n🎬 Creating VIDEO (all corners visible + yellow background + sliding)...")
+    print(f"\n🎬 Creating VIDEO (yellow background + all corners visible + sliding)...")
     print(f"   📷 Image: {os.path.basename(image_path)}")
     print(f"   ⏱️  Duration: {slide_duration} seconds")
     print(f"   🎨 Background: YELLOW")
@@ -253,7 +253,6 @@ def create_animated_video(image_path, output_path=None, slide_duration=18, audio
         print(f"   📍 Sliding animation:")
         print(f"      Start Y: {start_y:.1f} (bottom)")
         print(f"      End Y: {end_y:.1f} (top)")
-        print(f"      Image fits within screen: {new_width}x{new_height}")
 
         def image_slide_position(t):
             progress = min(1.0, t / slide_duration)
@@ -346,7 +345,6 @@ def create_animated_video(image_path, output_path=None, slide_duration=18, audio
 
         file_size_mb = os.path.getsize(output_path) / (1024 * 1024)
         print(f"   ✅ Video created: {file_size_mb:.1f} MB")
-        print(f"   ✅ All 4 corners visible, yellow background, sliding animation")
         return output_path
         
     except Exception as e:
@@ -462,8 +460,8 @@ Share your Stupid Broke Moment: https://www.stupidorange.com/share-moment/
 def main():
     print("="*60)
     print("🎬 DAILY YOUTUBE SHORTS")
-    print("📸 THUMBNAIL: Full screen stretch (no yellow)")
-    print("🎬 VIDEO: Yellow background + All corners visible + Sliding animation")
+    print("📸 THUMBNAIL: Image stretched to FULL SCREEN (no yellow)")
+    print("🎬 VIDEO: Yellow background + All corners visible + Sliding")
     print("="*60)
 
     image_path, image_num, state = get_next_image()
@@ -472,7 +470,7 @@ def main():
 
     print(f"\n🎯 Processing: {os.path.basename(image_path)}")
     
-    # Create THUMBNAIL: Full screen stretch, no yellow background
+    # Create THUMBNAIL: Full screen stretch, NO yellow background
     thumbnail_path = create_thumbnail_fullscreen(image_path)
     
     # Create VIDEO: Yellow background + all corners visible + sliding animation
@@ -497,7 +495,7 @@ def main():
         
         print("\n" + "="*60)
         print("✅ SUCCESS!")
-        print(f"   📸 Thumbnail: Full screen stretch (no yellow)")
+        print(f"   📸 Thumbnail: Image stretched to FULL SCREEN (no yellow)")
         print(f"   🎬 Video: Yellow background + All corners visible + Sliding")
         print(f"   🔗 URL: {result['video_url']}")
         print(f"   📁 State saved and pushed to GitHub")
