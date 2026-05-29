@@ -8,8 +8,13 @@ on:
 jobs:
   upload:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
     steps:
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.SET }}  # Changed from PAT_TOKEN to SET
       
       - uses: actions/setup-python@v5
         with:
@@ -30,6 +35,10 @@ jobs:
           echo "$TOKEN" | base64 -d > token.pickle
       
       - name: Run script
+        env:
+          GIT_TOKEN: ${{ secrets.SET }}  # Changed from PAT_TOKEN to SET
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
         run: python daily_shorts.py
       
       - name: Upload logs
