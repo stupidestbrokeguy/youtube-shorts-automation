@@ -1,5 +1,7 @@
 """
-Daily Picture to YouTube Shorts - Full Screen Stretch (No Yellow Background)
+Daily Picture to YouTube Shorts - Static Thumbnail + Animated Video
+Thumbnail: Full image stretched (static, no animation)
+Video: Smooth sliding animation from bottom to top
 """
 
 import os
@@ -12,7 +14,7 @@ from datetime import datetime
 from PIL import Image, ImageDraw, ImageFont
 
 # ========== CONFIGURATION ==========
-VIDEO_TITLE = "Stupid Broke Moment, What Happened? | Stupid Orange,| Stupidest Broke Guy,| Creative Daily"
+VIDEO_TITLE = "Stupid Broke Money, What Happened? - Stupid Orange, Stupidest Broke Guy, Creative Daily"
 HASHTAGS = "#stupidorange #creativedaily #stupidestbrokeguy #Dubai #UAE #fyp"
 VIDEO_DURATION = 15
 IMAGES_FOLDER = "daily_images"
@@ -34,7 +36,7 @@ def save_state(state):
 
 def get_next_image():
     state = load_state()
-
+    
     today = datetime.now().strftime("%Y-%m-%d")
     if state.get('last_date') == today:
         print(f"⚠️ Already posted today ({today})")
@@ -74,9 +76,12 @@ def find_free_port(start_port=8080, end_port=8090):
     return 8080
 
 def create_thumbnail_from_image(image_path, output_path=None):
-    """Create a thumbnail by stretching image to fill entire frame"""
-    print(f"\n🎬 Creating thumbnail...")
-
+    """
+    Create a STATIC thumbnail (full image stretched, NO animation)
+    This is what users see before clicking play
+    """
+    print(f"\n🎬 Creating STATIC thumbnail (what users see before playing)...")
+    
     if output_path is None:
         base = os.path.splitext(image_path)[0]
         output_path = f"{base}_thumbnail.png"
@@ -84,13 +89,13 @@ def create_thumbnail_from_image(image_path, output_path=None):
     try:
         pil_img = Image.open(image_path)
         img_width, img_height = pil_img.size
-
+        
         target_width, target_height = 1080, 1920
-
+        
         print(f"   📸 Original: {img_width}x{img_height}")
-        print(f"   📐 Stretching to: {target_width}x{target_height} (full frame)")
+        print(f"   📐 Stretching to: {target_width}x{target_height} (full frame, static)")
 
-        # Stretch to fill entire frame
+        # Stretch to fill entire frame (no animation, just the image)
         try:
             img_resized = pil_img.resize((target_width, target_height), Image.Resampling.LANCZOS)
         except AttributeError:
@@ -100,20 +105,23 @@ def create_thumbnail_from_image(image_path, output_path=None):
                 img_resized = pil_img.resize((target_width, target_height))
 
         img_resized.save(output_path, quality=90)
-        print(f"   ✅ Thumbnail created (full screen)")
+        print(f"   ✅ Static thumbnail created (full screen, no animation)")
         return output_path
-
+        
     except Exception as e:
         print(f"   ❌ Error: {e}")
         return None
 
 def create_shorts_video(image_path, output_path=None, slide_duration=15):
-    """Create YouTube Shorts video with stretching to fill entire frame"""
+    """
+    Create ANIMATED video (sliding from bottom to top when played)
+    This is what users see AFTER clicking play
+    """
     if output_path is None:
         base = os.path.splitext(image_path)[0]
         output_path = f"{base}_shorts.mp4"
 
-    print(f"\n🎬 Creating video...")
+    print(f"\n🎬 Creating ANIMATED video (what plays after clicking)...")
 
     try:
         from moviepy import ImageClip, CompositeVideoClip
@@ -129,30 +137,51 @@ def create_shorts_video(image_path, output_path=None, slide_duration=15):
 
     try:
         from PIL import Image
-
+        
         pil_img = Image.open(image_path)
         img_width, img_height = pil_img.size
-
+        
         print(f"   📸 Original: {img_width}x{img_height}")
-        print(f"   📐 Stretching to: {screen_width}x{screen_height} (full screen)")
+        
+        # Make image 30% larger for sliding animation
+        stretch_scale = 1.3
+        new_width = int(screen_width * stretch_scale)
+        new_height = int(screen_height * stretch_scale)
+        
+        print(f"   📐 Stretching to: {new_width}x{new_height} (for smooth sliding)")
 
-        # Stretch to fill entire screen
+        # Stretch image
         try:
-            img_resized = pil_img.resize((screen_width, screen_height), Image.Resampling.LANCZOS)
+            img_resized = pil_img.resize((new_width, new_height), Image.Resampling.LANCZOS)
         except AttributeError:
             try:
-                img_resized = pil_img.resize((screen_width, screen_height), Image.LANCZOS)
+                img_resized = pil_img.resize((new_width, new_height), Image.LANCZOS)
             except:
-                img_resized = pil_img.resize((screen_width, screen_height))
+                img_resized = pil_img.resize((new_width, new_height))
 
         temp_img_path = base + "_temp.png"
         img_resized.save(temp_img_path)
 
-        # Create image clip that fills entire screen
+        # Create image clip
         image_clip = ImageClip(temp_img_path, duration=slide_duration)
-        image_clip = image_clip.with_position(('center', 'center'))
+        
+        # SLIDING ANIMATION - starts from bottom, moves up smoothly
+        start_y = screen_height  # Start completely at bottom
+        end_y = -new_height + screen_height * 0.1  # End position (image mostly visible)
+        
+        print(f"   📍 SLIDING ANIMATION: from bottom (y={start_y}) to top (y={end_y:.0f})")
+        print(f"   ⏱️  Duration: {slide_duration} seconds")
 
-        # No background needed - image fills everything
+        def image_slide_position(t):
+            progress = min(1.0, t / slide_duration)
+            # Smooth easing function (starts slow, speeds up, ends slow)
+            eased = progress * progress * (3 - 2 * progress)
+            y = start_y + (end_y - start_y) * eased
+            return ('center', y)
+
+        image_clip = image_clip.with_position(image_slide_position)
+        
+        # No background needed - image fills everything as it slides
         final_clip = image_clip
 
         # Try to add audio
@@ -178,7 +207,7 @@ def create_shorts_video(image_path, output_path=None, slide_duration=15):
                 except Exception as e:
                     print(f"   ⚠️ Could not add {audio}: {e}")
 
-        print(f"   💾 Rendering...")
+        print(f"   💾 Rendering animated video...")
         audio_codec = 'aac' if any(os.path.exists(a) for a in audio_files) else None
 
         try:
@@ -190,7 +219,7 @@ def create_shorts_video(image_path, output_path=None, slide_duration=15):
         if os.path.exists(temp_img_path):
             os.remove(temp_img_path)
 
-        print(f"   ✅ Video created (full screen)")
+        print(f"   ✅ ANIMATED video created with sliding effect!")
         return output_path
     except Exception as e:
         print(f"   ❌ Error: {e}")
@@ -202,15 +231,26 @@ def upload_to_youtube(video_path, thumbnail_path=None):
     video_description = f"""{VIDEO_TITLE}
 
 {HASHTAGS}
-Welcome to the Stupid Orange world where stories are turned to royalties.
+Welcome to the Stupid Orange world where stories are turned to royalties. We ask strangers to share
+their stupid broke moments and we design nice t-shirts from the inspiration, earning the responded
+a royalty share for the shirt. Please feel free to go ahead, participate, connect and share the movement.
 
-Share your Stupid Broke Moment: https://www.stupidorange.com/share-moment/
+Share your Stupid Broke Moment and stand a chance to be Today's Winner - (https://www.stupidorange.com/share-moment/)
 
-View of Story Telling Heroes Hall of Fame: https://www.stupidorange.com/interviews/
+VIew our Hall of fame of Daily Winners Of the Stupid Orange Challenge - (https://www.stupidorange.com/interviews/)
 
-Connect with us on TikTok: tiktok.com/@stupidestbrokeguy
+Connect with Us On Social.
 
-Dont Miss, Friday Mondays Live Show: fridaymodays.stupidorange.com
+-Youtube connect here  - (https://www.youtube.com/@stupidestbrokeguy)
+-Tiktok connect here - (https://www.tiktok.com/@stupidestbrokeguy)
+
+Platforms Links.
+
+- Help someone fastract to collecting their first royalty, join Stupid Solom Fashion Line Waiting List - (stupidorange.com)
+- Friday Mondays show, we judge one Artist to evaluate whether overrated or not while deepdiving into creative ecomony - (fridaymondays.stupidorange.club)
+- Secure the system that is helping random broke people earn their first royalty, - (creativedaily.stupidorange.com)
+
+✨ Stupid Orange - Helping people start collecting royalties from their creativity.
 
 #stupidorange #creativedaily #stupidestbrokeguy #Dubai #UAE #fyp
 """
@@ -253,14 +293,15 @@ Dont Miss, Friday Mondays Live Show: fridaymodays.stupidorange.com
         media = MediaFileUpload(video_path, chunksize=-1, resumable=True)
         request = youtube.videos().insert(part=','.join(body.keys()), body=body, media_body=media)
         response = request.execute()
-
+        
         video_url = f"https://youtube.com/shorts/{response['id']}"
         print(f"   ✅ Uploaded! URL: {video_url}")
 
         if thumbnail_path and os.path.exists(thumbnail_path):
             try:
+                print(f"   🖼️ Uploading STATIC thumbnail...")
                 youtube.thumbnails().set(videoId=response['id'], media_body=MediaFileUpload(thumbnail_path)).execute()
-                print(f"   ✅ Thumbnail uploaded!")
+                print(f"   ✅ Static thumbnail uploaded!")
             except Exception as e:
                 print(f"   ⚠️ Thumbnail error: {e}")
 
@@ -271,7 +312,8 @@ Dont Miss, Friday Mondays Live Show: fridaymodays.stupidorange.com
 
 def main():
     print("="*60)
-    print("🎬 DAILY PICTURE TO YOUTUBE SHORTS (FULL SCREEN)")
+    print("🎬 DAILY PICTURE TO YOUTUBE SHORTS")
+    print("📸 STATIC Thumbnail + 🎬 ANIMATED Video")
     print("="*60)
 
     image_path, image_num, state = get_next_image()
@@ -279,22 +321,27 @@ def main():
         sys.exit(0)
 
     print(f"\n🎯 Processing: {os.path.basename(image_path)}")
-
+    
+    # Create STATIC thumbnail (what users see before clicking)
     thumbnail_path = create_thumbnail_from_image(image_path)
+    
+    # Create ANIMATED video (what plays after clicking)
     video_path = create_shorts_video(image_path, slide_duration=VIDEO_DURATION)
-
+    
     if video_path is None:
         print("❌ Video creation failed!")
         sys.exit(1)
 
     result = upload_to_youtube(video_path, thumbnail_path)
-
+    
     if result and result['status'] == 'success':
         state['last_index'] = image_num
         state['last_date'] = datetime.now().strftime("%Y-%m-%d")
         state['last_image'] = os.path.basename(image_path)
         save_state(state)
         print(f"\n✅ SUCCESS! {result['video_url']}")
+        print(f"\n📌 Note: Thumbnail is STATIC (full image)")
+        print(f"🎬 Video has SLIDING ANIMATION from bottom to top")
     else:
         print(f"\n❌ FAILED")
         sys.exit(1)
