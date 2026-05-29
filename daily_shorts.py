@@ -1,8 +1,10 @@
 """
-Daily Picture to YouTube Shorts - Creative Daily Style Animation
+Daily Picture to YouTube Shorts - Full Screen Image (No Background)
 Features:
-- THUMBNAIL: Image stretched to FULL SCREEN (NO yellow, image covers everything)
-- VIDEO: Yellow background + All 4 corners visible + Smooth sliding animation
+- THUMBNAIL: Image stretched to FULL SCREEN - touches ALL 4 corners
+- VIDEO: Same full screen image - NO yellow background EVER
+- NO animation - static image only
+- Image fills entire 1080x1920 frame completely
 - Audio support with looping
 - Auto-commits state to GitHub using SET secret
 """
@@ -20,7 +22,7 @@ from PIL import Image, ImageDraw, ImageFont
 # ========== CONFIGURATION ==========
 VIDEO_TITLE = "Stupid Broke Money, What Happened? - Stupid Orange, Stupidest Broke Guy, Creative Daily"
 HASHTAGS = "#stupidorange #creativedaily #stupidestbrokeguy #Dubai #UAE #fyp"
-VIDEO_DURATION = 18
+VIDEO_DURATION = 15
 IMAGES_FOLDER = "daily_images"
 STATE_FILE = "shorts_state.json"
 # ===================================
@@ -45,59 +47,40 @@ def commit_and_push_state():
     print(f"\n📤 Committing state changes to GitHub...")
     
     try:
-        # Check if we're in a git repository
         if not os.path.exists('.git'):
             print(f"   ⚠️ Not a git repository, skipping commit")
             return False
         
-        # Configure git user
         if os.environ.get('GITHUB_ACTIONS'):
-            # Running in GitHub Actions
             subprocess.run(['git', 'config', '--global', 'user.name', 'github-actions[bot]'], capture_output=True)
             subprocess.run(['git', 'config', '--global', 'user.email', 'github-actions[bot]@users.noreply.github.com'], capture_output=True)
             
-            # Use SET secret for authentication
             github_token = os.environ.get('GIT_TOKEN') or os.environ.get('SET')
             if github_token:
                 repo_url = f"https://{github_token}@github.com/{os.environ.get('GITHUB_REPOSITORY')}.git"
                 subprocess.run(['git', 'remote', 'set-url', 'origin', repo_url], capture_output=True)
                 print(f"   🔑 Using SET token for authentication")
         else:
-            # Running locally
             subprocess.run(['git', 'config', 'user.name', 'Daily-Shorts-Bot'], capture_output=True)
             subprocess.run(['git', 'config', 'user.email', 'bot@localhost'], capture_output=True)
         
-        # Pull latest changes first (to avoid conflicts)
-        pull_result = subprocess.run(['git', 'pull', '--rebase'], capture_output=True, text=True)
-        if pull_result.returncode == 0:
-            print(f"   📥 Pulled latest changes")
-        
-        # Add the state file
+        subprocess.run(['git', 'pull', '--rebase'], capture_output=True)
         subprocess.run(['git', 'add', STATE_FILE], check=True, capture_output=True)
         
-        # Check if there are changes to commit
         status_result = subprocess.run(['git', 'status', '--porcelain', STATE_FILE], capture_output=True, text=True)
         
         if status_result.stdout.strip():
-            # Commit the change
             commit_msg = f"Update shorts_state.json - posted image for {datetime.now().strftime('%Y-%m-%d')}"
             subprocess.run(['git', 'commit', '-m', commit_msg], check=True, capture_output=True)
             print(f"   ✅ Committed state")
             
-            # Push to remote
             push_result = subprocess.run(['git', 'push'], capture_output=True, text=True)
             if push_result.returncode == 0:
                 print(f"   ✅ State pushed to GitHub")
-            else:
-                print(f"   ⚠️ Push failed: {push_result.stderr}")
         else:
             print(f"   ℹ️ No changes to commit")
             
         return True
-        
-    except subprocess.CalledProcessError as e:
-        print(f"   ⚠️ Git command failed: {e}")
-        return False
     except Exception as e:
         print(f"   ⚠️ Could not commit state: {e}")
         return False
@@ -145,12 +128,12 @@ def find_free_port(start_port=8080, end_port=8090):
                 continue
     return 8080
 
-def create_thumbnail_fullscreen(image_path, output_path=None):
+def create_fullscreen_thumbnail(image_path, output_path=None):
     """
-    THUMBNAIL: Image stretched to FULL SCREEN (NO yellow background)
-    The image covers the entire 1080x1920 frame completely
+    Create THUMBNAIL: Image stretched to FULL SCREEN (1080x1920)
+    Image touches ALL 4 corners - NO yellow background
     """
-    print(f"\n📸 Creating THUMBNAIL (image stretched to full screen, no yellow)...")
+    print(f"\n📸 Creating FULL SCREEN THUMBNAIL (touches all 4 corners)...")
     
     if output_path is None:
         base = os.path.splitext(image_path)[0]
@@ -160,13 +143,13 @@ def create_thumbnail_fullscreen(image_path, output_path=None):
         pil_img = Image.open(image_path)
         img_width, img_height = pil_img.size
         
+        # YouTube Shorts dimensions (9:16 vertical)
         target_width, target_height = 1080, 1920
         
         print(f"   📸 Original: {img_width}x{img_height}")
-        print(f"   📐 Stretching to: {target_width}x{target_height} (covers entire frame)")
+        print(f"   📐 Target: {target_width}x{target_height}")
 
-        # Stretch the image to cover the ENTIRE frame
-        # This will distort the image but fills everything - NO yellow background
+        # Stretch image to cover ENTIRE frame - touches all 4 corners
         try:
             img_resized = pil_img.resize((target_width, target_height), Image.Resampling.LANCZOS)
         except AttributeError:
@@ -175,41 +158,42 @@ def create_thumbnail_fullscreen(image_path, output_path=None):
             except:
                 img_resized = pil_img.resize((target_width, target_height))
 
-        # Save directly - NO background added
-        img_resized.save(output_path, quality=90)
-        print(f"   ✅ Thumbnail created (image covers full screen)")
+        # Save directly - NO background, image fills everything
+        img_resized.save(output_path, quality=95)
+        print(f"   ✅ Thumbnail created (image touches all 4 corners)")
         return output_path
         
     except Exception as e:
         print(f"   ❌ Error: {e}")
         return None
 
-def create_animated_video(image_path, output_path=None, slide_duration=18, audio_file=None):
+def create_fullscreen_video(image_path, output_path=None, slide_duration=15, audio_file=None):
     """
-    VIDEO: All 4 corners visible + Yellow background + Sliding animation
-    Image fits entirely on screen, slides from bottom to top
+    Create VIDEO: Same as thumbnail - full screen image
+    NO yellow background - image touches ALL 4 corners
+    NO animation - static image
     """
     if output_path is None:
         base = os.path.splitext(image_path)[0]
         output_path = f"{base}_shorts.mp4"
 
-    print(f"\n🎬 Creating VIDEO (yellow background + all corners visible + sliding)...")
+    print(f"\n🎬 Creating FULL SCREEN VIDEO (no background, touches all corners)...")
     print(f"   📷 Image: {os.path.basename(image_path)}")
     print(f"   ⏱️  Duration: {slide_duration} seconds")
-    print(f"   🎨 Background: YELLOW")
-    print(f"   📐 All 4 corners visible (image fits on screen)")
+    print(f"   🎬 Animation: NONE (static image)")
+    print(f"   📐 Image fills entire screen - touches all 4 corners")
 
     try:
-        from moviepy import ImageClip, CompositeVideoClip, ColorClip
+        from moviepy import ImageClip
         from moviepy.audio.io.AudioFileClip import AudioFileClip
     except ImportError:
         try:
-            from moviepy.editor import ImageClip, CompositeVideoClip, ColorClip, AudioFileClip
+            from moviepy.editor import ImageClip, AudioFileClip
         except ImportError as e:
             print(f"❌ moviepy import failed: {e}")
             return None
 
-    # YouTube Shorts dimensions
+    # YouTube Shorts dimensions (9:16 vertical)
     screen_width, screen_height = 1080, 1920
 
     try:
@@ -219,17 +203,13 @@ def create_animated_video(image_path, output_path=None, slide_duration=18, audio
         img_width, img_height = pil_img.size
         print(f"   📸 Original: {img_width}x{img_height}")
         
-        # Calculate scale to fit ENTIRE image on screen (all corners visible)
-        fit_scale = min(screen_width / img_width, screen_height / img_height)
-        scale = fit_scale
+        # Stretch image to cover ENTIRE screen - touches all 4 corners
+        new_width = screen_width
+        new_height = screen_height
         
-        new_width = int(img_width * scale)
-        new_height = int(img_height * scale)
-        
-        print(f"   🔍 Scale: {scale:.4f} (full image fits on screen)")
-        print(f"   📐 Resized: {new_width}x{new_height}")
+        print(f"   📐 Video size: {new_width}x{new_height} (full screen)")
 
-        # High quality resize
+        # Stretch image to full screen
         try:
             img_resized = pil_img.resize((new_width, new_height), Image.Resampling.LANCZOS)
         except AttributeError:
@@ -241,36 +221,11 @@ def create_animated_video(image_path, output_path=None, slide_duration=18, audio
         temp_img_path = base + "_temp.png"
         img_resized.save(temp_img_path)
 
-        # Create image clip
-        image_clip = ImageClip(temp_img_path, duration=slide_duration)
+        # Create image clip - STATIC (no movement)
+        # Positioned to fill entire screen
+        final_clip = ImageClip(temp_img_path, duration=slide_duration)
         
-        # SLIDING ANIMATION - image stays fully on screen
-        # Start: image at bottom (y = screen_height - new_height)
-        # End: image at top (y = 0)
-        start_y = screen_height - new_height
-        end_y = 0
-        
-        print(f"   📍 Sliding animation:")
-        print(f"      Start Y: {start_y:.1f} (bottom)")
-        print(f"      End Y: {end_y:.1f} (top)")
-
-        def image_slide_position(t):
-            progress = min(1.0, t / slide_duration)
-            # Smooth easing function
-            eased = progress * progress * (3 - 2 * progress)
-            y = start_y + (end_y - start_y) * eased
-            return ('center', y)
-
-        image_clip = image_clip.with_position(image_slide_position)
-        
-        # YELLOW BACKGROUND
-        background = ColorClip(size=(screen_width, screen_height), color=(255, 215, 0), duration=slide_duration)
-        
-        # Composite
-        final_clip = CompositeVideoClip([background, image_clip], size=(screen_width, screen_height))
-        
-        print(f"   ✅ Yellow background + sliding animation set")
-        print(f"   ✅ All 4 corners of image visible throughout")
+        print(f"   ✅ Video created (full screen, no background)")
 
         # ========== AUDIO HANDLING ==========
         audio_added = False
@@ -299,11 +254,10 @@ def create_animated_video(image_path, output_path=None, slide_duration=18, audio
                 print(f"   ⚠️ Audio error: {e}")
                 return clip, False
 
-        # Try specified audio file first
+        # Try audio files
         if audio_file:
             final_clip, audio_added = add_audio_to_clip(final_clip, audio_file, 0.25)
         
-        # Try common audio files
         if not audio_added:
             common_audio = ["background_music.mp3", "shorts_music.mp3", "audio.mp3", "music.mp3", "bgm.mp3"]
             for audio in common_audio:
@@ -316,7 +270,7 @@ def create_animated_video(image_path, output_path=None, slide_duration=18, audio
             print(f"   ℹ️ No audio added - video will be silent")
 
         # Render video
-        print(f"   💾 Rendering video...")
+        print(f"   💾 Rendering full screen video...")
         audio_codec = 'aac' if audio_added else None
 
         try:
@@ -344,7 +298,8 @@ def create_animated_video(image_path, output_path=None, slide_duration=18, audio
             os.remove(temp_img_path)
 
         file_size_mb = os.path.getsize(output_path) / (1024 * 1024)
-        print(f"   ✅ Video created: {file_size_mb:.1f} MB")
+        print(f"   ✅ Full screen video created: {file_size_mb:.1f} MB")
+        print(f"   ✅ Image fills entire screen - touches all 4 corners")
         return output_path
         
     except Exception as e:
@@ -363,6 +318,10 @@ def upload_to_youtube(video_path, thumbnail_path=None):
 Welcome to the Stupid Orange world where stories are turned to royalties.
 
 Share your Stupid Broke Moment: https://www.stupidorange.com/share-moment/
+
+Connect with Us On Social:
+- Youtube: https://www.youtube.com/@stupidestbrokeguy
+- Tiktok: https://www.tiktok.com/@stupidestbrokeguy
 
 #stupidorange #creativedaily #stupidestbrokeguy #Dubai #UAE #fyp
 """
@@ -409,7 +368,7 @@ Share your Stupid Broke Moment: https://www.stupidorange.com/share-moment/
             'snippet': {
                 'title': VIDEO_TITLE[:100],
                 'description': video_description[:5000],
-                'tags': ['stupidorange', 'creativedaily', 'shorts'],
+                'tags': ['stupidorange', 'creativedaily', 'stupidestbrokeguy', 'Dubai', 'UAE', 'fyp', 'shorts'],
                 'categoryId': '22'
             },
             'status': {
@@ -437,10 +396,10 @@ Share your Stupid Broke Moment: https://www.stupidorange.com/share-moment/
         video_url = f"https://youtube.com/shorts/{video_id}"
         print(f"   ✅ Uploaded! URL: {video_url}")
 
-        # Upload thumbnail
+        # Upload full screen thumbnail
         if thumbnail_path and os.path.exists(thumbnail_path):
             try:
-                print(f"   🖼️ Uploading thumbnail...")
+                print(f"   🖼️ Uploading full screen thumbnail...")
                 youtube.thumbnails().set(
                     videoId=video_id,
                     media_body=MediaFileUpload(thumbnail_path)
@@ -459,9 +418,10 @@ Share your Stupid Broke Moment: https://www.stupidorange.com/share-moment/
 
 def main():
     print("="*60)
-    print("🎬 DAILY YOUTUBE SHORTS")
-    print("📸 THUMBNAIL: Image stretched to FULL SCREEN (no yellow)")
-    print("🎬 VIDEO: Yellow background + All corners visible + Sliding")
+    print("🎬 DAILY YOUTUBE SHORTS - FULL SCREEN IMAGE")
+    print("📸 THUMBNAIL: Image stretched to full screen - ALL 4 CORNERS")
+    print("🎬 VIDEO: Same full screen image - NO BACKGROUND EVER")
+    print("📐 Image touches all 4 corners of the YouTube Short")
     print("="*60)
 
     image_path, image_num, state = get_next_image()
@@ -470,11 +430,11 @@ def main():
 
     print(f"\n🎯 Processing: {os.path.basename(image_path)}")
     
-    # Create THUMBNAIL: Full screen stretch, NO yellow background
-    thumbnail_path = create_thumbnail_fullscreen(image_path)
+    # Create FULL SCREEN THUMBNAIL (touches all 4 corners, no background)
+    thumbnail_path = create_fullscreen_thumbnail(image_path)
     
-    # Create VIDEO: Yellow background + all corners visible + sliding animation
-    video_path = create_animated_video(image_path, slide_duration=VIDEO_DURATION)
+    # Create FULL SCREEN VIDEO (same as thumbnail, no animation)
+    video_path = create_fullscreen_video(image_path, slide_duration=VIDEO_DURATION)
     
     if video_path is None:
         print("❌ Video creation failed!")
@@ -495,8 +455,8 @@ def main():
         
         print("\n" + "="*60)
         print("✅ SUCCESS!")
-        print(f"   📸 Thumbnail: Image stretched to FULL SCREEN (no yellow)")
-        print(f"   🎬 Video: Yellow background + All corners visible + Sliding")
+        print(f"   📸 Thumbnail: Full screen - touches all 4 corners")
+        print(f"   🎬 Video: Full screen - NO background, NO animation")
         print(f"   🔗 URL: {result['video_url']}")
         print(f"   📁 State saved and pushed to GitHub")
         print("="*60)
