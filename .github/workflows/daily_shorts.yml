@@ -9,13 +9,15 @@ jobs:
   upload:
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # This is CRITICAL for pushing
+      contents: write
+      actions: write
     
     steps:
       - uses: actions/checkout@v4
         with:
-          token: ${{ secrets.SET }}  # Use your SET secret
+          token: ${{ secrets.SET }}
           persist-credentials: true
+          fetch-depth: 0
       
       - uses: actions/setup-python@v5
         with:
@@ -42,11 +44,11 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: python daily_shorts.py
       
-      - name: Push state changes
+      - name: Push changes
         if: always()
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add shorts_state.json
           git diff --staged --quiet || git commit -m "Update shorts_state.json [skip ci]"
-          git push
+          git push origin HEAD:main --force
