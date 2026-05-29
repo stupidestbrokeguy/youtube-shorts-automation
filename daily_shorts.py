@@ -1,10 +1,8 @@
 """
 Daily Picture to YouTube Shorts - Creative Daily Style Animation
 Features:
-- Full image visible (all 4 corners stay on screen)
-- Yellow background
-- Smooth sliding animation from bottom to top
-- Static thumbnail (full image, no yellow background)
+- THUMBNAIL: Full screen stretch (no yellow background, image covers everything)
+- VIDEO: All 4 corners visible + Yellow background + Smooth sliding animation
 - Audio support with looping
 - Auto-commits state to GitHub using SET secret
 """
@@ -147,12 +145,13 @@ def find_free_port(start_port=8080, end_port=8090):
                 continue
     return 8080
 
-def create_static_thumbnail(image_path, output_path=None):
+def create_thumbnail_fullscreen(image_path, output_path=None):
     """
-    Create STATIC thumbnail (full image stretched, NO yellow background)
+    Create THUMBNAIL: Full screen stretch (NO yellow background)
+    Image is stretched to cover entire 1080x1920 frame
     This is what users see BEFORE clicking play
     """
-    print(f"\n🎬 Creating STATIC thumbnail (what users see before playing)...")
+    print(f"\n🎬 Creating THUMBNAIL (full screen stretch, no yellow background)...")
     
     if output_path is None:
         base = os.path.splitext(image_path)[0]
@@ -165,9 +164,9 @@ def create_static_thumbnail(image_path, output_path=None):
         target_width, target_height = 1080, 1920
         
         print(f"   📸 Original: {img_width}x{img_height}")
-        print(f"   📐 Stretching to: {target_width}x{target_height} (full frame, no background)")
+        print(f"   📐 Stretching to: {target_width}x{target_height} (full screen, covers everything)")
 
-        # Stretch to fill entire frame (no yellow background)
+        # Stretch to fill entire frame (no yellow background visible)
         try:
             img_resized = pil_img.resize((target_width, target_height), Image.Resampling.LANCZOS)
         except AttributeError:
@@ -177,7 +176,7 @@ def create_static_thumbnail(image_path, output_path=None):
                 img_resized = pil_img.resize((target_width, target_height))
 
         img_resized.save(output_path, quality=90)
-        print(f"   ✅ Static thumbnail created")
+        print(f"   ✅ Thumbnail created (full screen stretch, no yellow)")
         return output_path
         
     except Exception as e:
@@ -186,19 +185,19 @@ def create_static_thumbnail(image_path, output_path=None):
 
 def create_animated_video(image_path, output_path=None, slide_duration=18, audio_file=None):
     """
-    Create ANIMATED video with ALL 4 CORNERS VISIBLE throughout animation
-    Yellow background, smooth sliding from bottom to top
-    Image stays fully on screen (no zoom, no cropping)
+    Create VIDEO: All 4 corners visible + Yellow background + Sliding animation
+    Image fits entirely on screen, slides from bottom to top
+    This is what plays AFTER clicking play
     """
     if output_path is None:
         base = os.path.splitext(image_path)[0]
         output_path = f"{base}_shorts.mp4"
 
-    print(f"\n🎬 Creating ANIMATED video (what plays after clicking)...")
+    print(f"\n🎬 Creating VIDEO (all corners visible + yellow background + sliding)...")
     print(f"   📷 Image: {os.path.basename(image_path)}")
     print(f"   ⏱️  Duration: {slide_duration} seconds")
     print(f"   🎨 Background: YELLOW")
-    print(f"   📐 All 4 corners visible (no zoom, no cropping)")
+    print(f"   📐 All 4 corners visible (image fits on screen)")
 
     try:
         from moviepy import ImageClip, CompositeVideoClip, ColorClip
@@ -221,19 +220,16 @@ def create_animated_video(image_path, output_path=None, slide_duration=18, audio
         print(f"   📸 Original: {img_width}x{img_height}")
         
         # Calculate scale to fit ENTIRE image on screen (all corners visible)
-        # This ensures the whole image fits within the screen
         fit_scale = min(screen_width / img_width, screen_height / img_height)
-        
-        # NO extra zoom - keep full image visible
         scale = fit_scale
         
         new_width = int(img_width * scale)
         new_height = int(img_height * scale)
         
-        print(f"   🔍 Scale: {scale:.4f} (full image, all corners visible)")
+        print(f"   🔍 Scale: {scale:.4f} (full image fits on screen)")
         print(f"   📐 Resized: {new_width}x{new_height}")
 
-        # High quality resize - keep entire image
+        # High quality resize
         try:
             img_resized = pil_img.resize((new_width, new_height), Image.Resampling.LANCZOS)
         except AttributeError:
@@ -248,35 +244,34 @@ def create_animated_video(image_path, output_path=None, slide_duration=18, audio
         # Create image clip
         image_clip = ImageClip(temp_img_path, duration=slide_duration)
         
-        # SMOOTH SLIDING ANIMATION - image stays fully on screen
-        # Start position: image at bottom (y = screen_height - new_height)
-        # End position: image at top (y = 0 or slight margin)
+        # SLIDING ANIMATION - image stays fully on screen
+        # Start: image at bottom (y = screen_height - new_height)
+        # End: image at top (y = 0)
+        start_y = screen_height - new_height
+        end_y = 0
         
-        start_y = screen_height - new_height  # Image sits at bottom edge
-        end_y = 0  # Image moves to top edge (all corners still visible)
-        
-        print(f"   📍 Animation (all corners visible):")
+        print(f"   📍 Sliding animation:")
         print(f"      Start Y: {start_y:.1f} (bottom)")
         print(f"      End Y: {end_y:.1f} (top)")
         print(f"      Image fits within screen: {new_width}x{new_height}")
 
         def image_slide_position(t):
             progress = min(1.0, t / slide_duration)
-            # Smooth easing function (starts slow, speeds up, ends slow)
+            # Smooth easing function
             eased = progress * progress * (3 - 2 * progress)
             y = start_y + (end_y - start_y) * eased
             return ('center', y)
 
         image_clip = image_clip.with_position(image_slide_position)
         
-        # YELLOW BACKGROUND (Creative Daily style)
+        # YELLOW BACKGROUND
         background = ColorClip(size=(screen_width, screen_height), color=(255, 215, 0), duration=slide_duration)
         
-        # Composite - image on top of yellow background
+        # Composite
         final_clip = CompositeVideoClip([background, image_clip], size=(screen_width, screen_height))
         
         print(f"   ✅ Yellow background + sliding animation set")
-        print(f"   ✅ All 4 corners of image remain visible throughout")
+        print(f"   ✅ All 4 corners of image visible throughout")
 
         # ========== AUDIO HANDLING ==========
         audio_added = False
@@ -322,7 +317,7 @@ def create_animated_video(image_path, output_path=None, slide_duration=18, audio
             print(f"   ℹ️ No audio added - video will be silent")
 
         # Render video
-        print(f"   💾 Rendering video with full image visibility...")
+        print(f"   💾 Rendering video...")
         audio_codec = 'aac' if audio_added else None
 
         try:
@@ -351,7 +346,7 @@ def create_animated_video(image_path, output_path=None, slide_duration=18, audio
 
         file_size_mb = os.path.getsize(output_path) / (1024 * 1024)
         print(f"   ✅ Video created: {file_size_mb:.1f} MB")
-        print(f"   ✅ All 4 corners visible throughout animation")
+        print(f"   ✅ All 4 corners visible, yellow background, sliding animation")
         return output_path
         
     except Exception as e:
@@ -444,15 +439,15 @@ Share your Stupid Broke Moment: https://www.stupidorange.com/share-moment/
         video_url = f"https://youtube.com/shorts/{video_id}"
         print(f"   ✅ Uploaded! URL: {video_url}")
 
-        # Upload static thumbnail
+        # Upload thumbnail
         if thumbnail_path and os.path.exists(thumbnail_path):
             try:
-                print(f"   🖼️ Uploading static thumbnail...")
+                print(f"   🖼️ Uploading thumbnail...")
                 youtube.thumbnails().set(
                     videoId=video_id,
                     media_body=MediaFileUpload(thumbnail_path)
                 ).execute()
-                print(f"   ✅ Static thumbnail uploaded!")
+                print(f"   ✅ Thumbnail uploaded!")
             except Exception as e:
                 print(f"   ⚠️ Thumbnail error: {e}")
 
@@ -466,9 +461,9 @@ Share your Stupid Broke Moment: https://www.stupidorange.com/share-moment/
 
 def main():
     print("="*60)
-    print("🎬 DAILY YOUTUBE SHORTS - CREATIVE DAILY STYLE")
-    print("📸 Static thumbnail + 🎬 Yellow background + Sliding animation")
-    print("📐 All 4 corners of image visible throughout")
+    print("🎬 DAILY YOUTUBE SHORTS")
+    print("📸 THUMBNAIL: Full screen stretch (no yellow)")
+    print("🎬 VIDEO: Yellow background + All corners visible + Sliding animation")
     print("="*60)
 
     image_path, image_num, state = get_next_image()
@@ -477,11 +472,10 @@ def main():
 
     print(f"\n🎯 Processing: {os.path.basename(image_path)}")
     
-    # Create STATIC thumbnail (what users see before clicking)
-    thumbnail_path = create_static_thumbnail(image_path)
+    # Create THUMBNAIL: Full screen stretch, no yellow background
+    thumbnail_path = create_thumbnail_fullscreen(image_path)
     
-    # Create ANIMATED video with yellow background and sliding
-    # All 4 corners of image remain visible
+    # Create VIDEO: Yellow background + all corners visible + sliding animation
     video_path = create_animated_video(image_path, slide_duration=VIDEO_DURATION)
     
     if video_path is None:
@@ -503,9 +497,8 @@ def main():
         
         print("\n" + "="*60)
         print("✅ SUCCESS!")
-        print(f"   📸 Thumbnail: Static (full image, no background)")
-        print(f"   🎬 Video: Yellow background + sliding animation")
-        print(f"   📐 All 4 corners of image visible throughout")
+        print(f"   📸 Thumbnail: Full screen stretch (no yellow)")
+        print(f"   🎬 Video: Yellow background + All corners visible + Sliding")
         print(f"   🔗 URL: {result['video_url']}")
         print(f"   📁 State saved and pushed to GitHub")
         print("="*60)
