@@ -9,12 +9,13 @@ jobs:
   upload:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: write  # This is CRITICAL for pushing
     
     steps:
       - uses: actions/checkout@v4
         with:
-          token: ${{ secrets.SET }}  # Changed from PAT_TOKEN to SET
+          token: ${{ secrets.SET }}  # Use your SET secret
+          persist-credentials: true
       
       - uses: actions/setup-python@v5
         with:
@@ -36,16 +37,16 @@ jobs:
       
       - name: Run script
         env:
-          GIT_TOKEN: ${{ secrets.SET }}  # Changed from PAT_TOKEN to SET
+          GIT_TOKEN: ${{ secrets.SET }}
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: python daily_shorts.py
       
-      - name: Upload logs
-        uses: actions/upload-artifact@v4
-        with:
-          name: shorts-output
-          path: |
-            shorts_state.json
-            *.mp4
-            *.png
+      - name: Push state changes
+        if: always()
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add shorts_state.json
+          git diff --staged --quiet || git commit -m "Update shorts_state.json [skip ci]"
+          git push
