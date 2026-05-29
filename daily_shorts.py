@@ -1,7 +1,7 @@
 """
 Daily Picture to YouTube Shorts - Creative Daily Style Animation
 Features:
-- 60% zoom for better readability
+- Full image visible (all 4 corners stay on screen)
 - Yellow background
 - Smooth sliding animation from bottom to top
 - Static thumbnail (full image, no yellow background)
@@ -20,7 +20,7 @@ from datetime import datetime
 from PIL import Image, ImageDraw, ImageFont
 
 # ========== CONFIGURATION ==========
-VIDEO_TITLE = "Stupid Broke Money, What Happened? - Stupid Orange, Stupidest Broke Guy, Creative Daily"
+VIDEO_TITLE = "Stupid Broke Moment, What Happened? - Stupid Orange, Stupidest Broke Guy, Creative Daily"
 HASHTAGS = "#stupidorange #creativedaily #stupidestbrokeguy #Dubai #UAE #fyp"
 VIDEO_DURATION = 18
 IMAGES_FOLDER = "daily_images"
@@ -167,6 +167,7 @@ def create_static_thumbnail(image_path, output_path=None):
         print(f"   📸 Original: {img_width}x{img_height}")
         print(f"   📐 Stretching to: {target_width}x{target_height} (full frame, no background)")
 
+        # Stretch to fill entire frame (no yellow background)
         try:
             img_resized = pil_img.resize((target_width, target_height), Image.Resampling.LANCZOS)
         except AttributeError:
@@ -185,8 +186,9 @@ def create_static_thumbnail(image_path, output_path=None):
 
 def create_animated_video(image_path, output_path=None, slide_duration=18, audio_file=None):
     """
-    Create ANIMATED video with 60% zoom, yellow background, smooth sliding
-    This is what plays AFTER clicking play
+    Create ANIMATED video with ALL 4 CORNERS VISIBLE throughout animation
+    Yellow background, smooth sliding from bottom to top
+    Image stays fully on screen (no zoom, no cropping)
     """
     if output_path is None:
         base = os.path.splitext(image_path)[0]
@@ -196,7 +198,7 @@ def create_animated_video(image_path, output_path=None, slide_duration=18, audio
     print(f"   📷 Image: {os.path.basename(image_path)}")
     print(f"   ⏱️  Duration: {slide_duration} seconds")
     print(f"   🎨 Background: YELLOW")
-    print(f"   🔍 Zoom: 60%")
+    print(f"   📐 All 4 corners visible (no zoom, no cropping)")
 
     try:
         from moviepy import ImageClip, CompositeVideoClip, ColorClip
@@ -218,20 +220,20 @@ def create_animated_video(image_path, output_path=None, slide_duration=18, audio
         img_width, img_height = pil_img.size
         print(f"   📸 Original: {img_width}x{img_height}")
         
-        # 60% ZOOM for larger, readable text (Creative Daily style)
+        # Calculate scale to fit ENTIRE image on screen (all corners visible)
+        # This ensures the whole image fits within the screen
         fit_scale = min(screen_width / img_width, screen_height / img_height)
-        zoom_factor = 1.6  # 60% zoom
-        scale = fit_scale * zoom_factor
+        
+        # NO extra zoom - keep full image visible
+        scale = fit_scale
         
         new_width = int(img_width * scale)
         new_height = int(img_height * scale)
         
-        print(f"   🔍 Fit scale: {fit_scale:.4f}")
-        print(f"   🔍 Zoom factor: {zoom_factor}")
-        print(f"   🔍 Final scale: {scale:.4f}")
+        print(f"   🔍 Scale: {scale:.4f} (full image, all corners visible)")
         print(f"   📐 Resized: {new_width}x{new_height}")
 
-        # High quality resize
+        # High quality resize - keep entire image
         try:
             img_resized = pil_img.resize((new_width, new_height), Image.Resampling.LANCZOS)
         except AttributeError:
@@ -246,24 +248,23 @@ def create_animated_video(image_path, output_path=None, slide_duration=18, audio
         # Create image clip
         image_clip = ImageClip(temp_img_path, duration=slide_duration)
         
-        # SMOOTH SLIDING ANIMATION (Creative Daily style)
-        start_y_original = screen_height
-        end_y_original = -new_height + screen_height * 0.2
-        progress_at_4_8s = 4.8 / slide_duration
-        eased_at_4_8s = progress_at_4_8s * progress_at_4_8s * (3 - 2 * progress_at_4_8s)
-        y_at_4_8s = start_y_original + (end_y_original - start_y_original) * eased_at_4_8s
+        # SMOOTH SLIDING ANIMATION - image stays fully on screen
+        # Start position: image at bottom (y = screen_height - new_height)
+        # End position: image at top (y = 0 or slight margin)
         
-        new_start_y = y_at_4_8s
-        new_end_y = end_y_original
+        start_y = screen_height - new_height  # Image sits at bottom edge
+        end_y = 0  # Image moves to top edge (all corners still visible)
         
-        print(f"   📍 Animation:")
-        print(f"      Start Y: {new_start_y:.1f}")
-        print(f"      End Y: {new_end_y:.1f}")
+        print(f"   📍 Animation (all corners visible):")
+        print(f"      Start Y: {start_y:.1f} (bottom)")
+        print(f"      End Y: {end_y:.1f} (top)")
+        print(f"      Image fits within screen: {new_width}x{new_height}")
 
         def image_slide_position(t):
             progress = min(1.0, t / slide_duration)
+            # Smooth easing function (starts slow, speeds up, ends slow)
             eased = progress * progress * (3 - 2 * progress)
-            y = new_start_y + (new_end_y - new_start_y) * eased
+            y = start_y + (end_y - start_y) * eased
             return ('center', y)
 
         image_clip = image_clip.with_position(image_slide_position)
@@ -271,10 +272,11 @@ def create_animated_video(image_path, output_path=None, slide_duration=18, audio
         # YELLOW BACKGROUND (Creative Daily style)
         background = ColorClip(size=(screen_width, screen_height), color=(255, 215, 0), duration=slide_duration)
         
-        # Composite
+        # Composite - image on top of yellow background
         final_clip = CompositeVideoClip([background, image_clip], size=(screen_width, screen_height))
         
         print(f"   ✅ Yellow background + sliding animation set")
+        print(f"   ✅ All 4 corners of image remain visible throughout")
 
         # ========== AUDIO HANDLING ==========
         audio_added = False
@@ -303,10 +305,11 @@ def create_animated_video(image_path, output_path=None, slide_duration=18, audio
                 print(f"   ⚠️ Audio error: {e}")
                 return clip, False
 
-        # Try audio files
+        # Try specified audio file first
         if audio_file:
             final_clip, audio_added = add_audio_to_clip(final_clip, audio_file, 0.25)
         
+        # Try common audio files
         if not audio_added:
             common_audio = ["background_music.mp3", "shorts_music.mp3", "audio.mp3", "music.mp3", "bgm.mp3"]
             for audio in common_audio:
@@ -319,7 +322,7 @@ def create_animated_video(image_path, output_path=None, slide_duration=18, audio
             print(f"   ℹ️ No audio added - video will be silent")
 
         # Render video
-        print(f"   💾 Rendering video...")
+        print(f"   💾 Rendering video with full image visibility...")
         audio_codec = 'aac' if audio_added else None
 
         try:
@@ -348,6 +351,7 @@ def create_animated_video(image_path, output_path=None, slide_duration=18, audio
 
         file_size_mb = os.path.getsize(output_path) / (1024 * 1024)
         print(f"   ✅ Video created: {file_size_mb:.1f} MB")
+        print(f"   ✅ All 4 corners visible throughout animation")
         return output_path
         
     except Exception as e:
@@ -464,6 +468,7 @@ def main():
     print("="*60)
     print("🎬 DAILY YOUTUBE SHORTS - CREATIVE DAILY STYLE")
     print("📸 Static thumbnail + 🎬 Yellow background + Sliding animation")
+    print("📐 All 4 corners of image visible throughout")
     print("="*60)
 
     image_path, image_num, state = get_next_image()
@@ -476,6 +481,7 @@ def main():
     thumbnail_path = create_static_thumbnail(image_path)
     
     # Create ANIMATED video with yellow background and sliding
+    # All 4 corners of image remain visible
     video_path = create_animated_video(image_path, slide_duration=VIDEO_DURATION)
     
     if video_path is None:
@@ -498,7 +504,8 @@ def main():
         print("\n" + "="*60)
         print("✅ SUCCESS!")
         print(f"   📸 Thumbnail: Static (full image, no background)")
-        print(f"   🎬 Video: Yellow background + 60% zoom + sliding animation")
+        print(f"   🎬 Video: Yellow background + sliding animation")
+        print(f"   📐 All 4 corners of image visible throughout")
         print(f"   🔗 URL: {result['video_url']}")
         print(f"   📁 State saved and pushed to GitHub")
         print("="*60)
