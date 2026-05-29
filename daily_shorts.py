@@ -1,9 +1,9 @@
 """
 Daily Picture to YouTube Shorts - Full Screen Image (No Background)
 Features:
-- THUMBNAIL: Compressed to under 2MB for YouTube
-- VIDEO: Full screen image - NO background
-- Auto-commits state to GitHub
+- THUMBNAIL: Compressed JPG under 2MB for YouTube
+- VIDEO: Full screen image - NO background, NO animation
+- Auto-commits state to GitHub using GITHUB_TOKEN
 """
 
 import os
@@ -25,6 +25,7 @@ STATE_FILE = "shorts_state.json"
 # ===================================
 
 def load_state():
+    """Load the state file to know which image to use next"""
     if os.path.exists(STATE_FILE):
         with open(STATE_FILE, 'r') as f:
             state = json.load(f)
@@ -33,16 +34,17 @@ def load_state():
     return {'last_index': 0, 'last_date': None, 'last_image': None}
 
 def save_state(state):
+    """Save current state locally"""
     with open(STATE_FILE, 'w') as f:
         json.dump(state, f, indent=2)
     print(f"💾 State saved locally")
 
 def commit_and_push_state():
-    """Commit and push shorts_state.json back to GitHub"""
+    """Commit and push shorts_state.json back to GitHub using GITHUB_TOKEN"""
     print(f"\n📤 Committing state changes to GitHub...")
     
     try:
-        # First, stash any changes or commit them
+        # Configure git user
         subprocess.run(['git', 'config', '--global', 'user.name', 'github-actions[bot]'], capture_output=True)
         subprocess.run(['git', 'config', '--global', 'user.email', 'github-actions[bot]@users.noreply.github.com'], capture_output=True)
         
@@ -59,14 +61,13 @@ def commit_and_push_state():
         subprocess.run(['git', 'commit', '-m', commit_msg], check=True, capture_output=True)
         print(f"   ✅ Committed state")
         
-        # Push using the token from environment
-        # The checkout action already set up the remote with the token
+        # Push to remote
         push_result = subprocess.run(['git', 'push'], capture_output=True, text=True)
         if push_result.returncode == 0:
             print(f"   ✅ State pushed to GitHub")
         else:
             print(f"   ⚠️ Push failed: {push_result.stderr}")
-            # Try with force push
+            # Try force push as fallback
             force_push = subprocess.run(['git', 'push', '--force'], capture_output=True, text=True)
             if force_push.returncode == 0:
                 print(f"   ✅ State force-pushed to GitHub")
@@ -74,11 +75,15 @@ def commit_and_push_state():
                 print(f"   ❌ Push failed")
             
         return True
+    except subprocess.CalledProcessError as e:
+        print(f"   ⚠️ Git command failed: {e}")
+        return False
     except Exception as e:
         print(f"   ⚠️ Could not commit state: {e}")
         return False
 
 def get_next_image():
+    """Determine which image to use today"""
     state = load_state()
     
     today = datetime.now().strftime("%Y-%m-%d")
@@ -110,6 +115,7 @@ def get_next_image():
     return next_image, next_num, state
 
 def find_free_port(start_port=8080, end_port=8090):
+    """Find a free port for OAuth callback"""
     for port in range(start_port, end_port):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             try:
@@ -125,7 +131,7 @@ def create_fullscreen_thumbnail(image_path, output_path=None):
     
     if output_path is None:
         base = os.path.splitext(image_path)[0]
-        output_path = f"{base}_thumbnail.jpg"  # Use JPG for smaller size
+        output_path = f"{base}_thumbnail.jpg"
 
     try:
         pil_img = Image.open(image_path)
