@@ -18,7 +18,7 @@ from PIL import Image
 import random
 
 # ========== CONFIGURATION ==========
-VIDEO_TITLE = "Stupid Broke Money, What Happened? - Stupid Orange, Stupidest Broke Guy, Creative Daily"
+VIDEO_TITLE = "Stupid Broke Moment, What Happened? - Stupid Orange, Stupidest Broke Guy, Creative Daily"
 HASHTAGS = "#stupidorange #creativedaily #stupidestbrokeguy #Dubai #UAE #fyp"
 VIDEO_DURATION = random.randint(16, 21) 
 IMAGES_FOLDER = "daily_images"
